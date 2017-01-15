@@ -1,0 +1,62 @@
+Script started on Sat 14 Jan 2017 07:12:41 PM EST
+]0;dillon@dillon-VirtualBox: ~/compsys/CS5541-DillonDaudert-NumberDemonstrations[01;32mdillon@dillon-VirtualBox[00m:[01;34m~/compsys/CS5541-DillonDaudert-NumberDemonstrations[00m$ make
+gcc -c problems.c 
+[01m[Kproblems.c:[m[K In function ‘[01m[Kprob5[m[K’:
+[01m[Kproblems.c:78:14:[m[K [01;35m[Kwarning: [m[Kinteger overflow in expression [-Woverflow]
+     a = 50000*50000;
+[01;32m[K              ^[m[K
+[01m[Kproblems.c:81:14:[m[K [01;35m[Kwarning: [m[Kinteger overflow in expression [-Woverflow]
+     a = 60000*60000;
+[01;32m[K              ^[m[K
+gcc -std=c99 -Wall problems.o -o problems.out
+]0;dillon@dillon-VirtualBox: ~/compsys/CS5541-DillonDaudert-NumberDemonstrations[01;32mdillon@dillon-VirtualBox[00m:[01;34m~/compsys/CS5541-DillonDaudert-NumberDemonstrations[00m$ ./problems.out 
+Problem 1:
+Expected: 3.6000000000
+Result: 3.5999999046
+
+Problem 2:
+Expected: Something close to 0.100... but not exactly.
+Result: 0.1000000015
+
+Problem3a:
+Expected: If the compiler converts to floats before doing the operation, 0.5, otherwise 0.
+Result: 0.000000
+Problem3b:
+Expected: 0.5
+Result: 0.500000
+
+Problem 4a:
+Expected: 99999999.4499999999.
+Result: 1e+07
+Problem 4b:
+Expected: Something weird.
+Result: 9999999.000000
+
+Problem 5a:
+Expected: 900,000,000.
+Result: 900000000
+Problem 5b:
+Expected: 1,600,000,000.
+Result: 1600000000
+Problem 5c:
+Expected: A large negative integer.
+Result: -1794967296
+Problem 5d:
+Expected: A slightly smaller negative integer.
+Result: -694967296
+
+Problem 6a:
+Expected: A large number
+Result: 100000002004087734272.000000
+Problem 6b:
+Expected: This is probably too large for a float
+Result: 100000002004087734272.000000
+Problem 6c:
+Expected: For the following, I'm not sure what to expect
+Result: 103500002601996386304.000000
+Problem 6d:
+Result: 100000002004087734272.000000
+
+]0;dillon@dillon-VirtualBox: ~/compsys/CS5541-DillonDaudert-NumberDemonstrations[01;32mdillon@dillon-VirtualBox[00m:[01;34m~/compsys/CS5541-DillonDaudert-NumberDemonstrations[00m$ exit
+
+Script done on Sat 14 Jan 2017 07:12:57 PM EST
