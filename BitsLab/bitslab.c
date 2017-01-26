@@ -236,6 +236,10 @@ int tmin(void) {
 int fitsBits(int x, int n) {
   return 2;
 }
+
+
+
+
 /* 
  * divpwr2 - Compute x/(2^n), for 0 <= n <= 30
  *  Round toward zero
@@ -245,8 +249,12 @@ int fitsBits(int x, int n) {
  *   Points: 2
  */
 int divpwr2(int x, int n) {
-    return 2;
+    return x >> n;
 }
+
+
+
+
 /* 
  * negate - return -x 
  *   Example: negate(1) = -1.
@@ -255,8 +263,14 @@ int divpwr2(int x, int n) {
  *   Points: 2
  */
 int negate(int x) {
-  return 2;
+    /* Two's complement
+     */
+    return ~x + 1;
 }
+
+
+
+
 /* 
  * isPositive - return 1 if x > 0, return 0 otherwise 
  *   Example: isPositive(-1) = 0.
@@ -265,8 +279,18 @@ int negate(int x) {
  *   Points: 3
  */
 int isPositive(int x) {
-  return 2;
+    /* If we were only looking at nonnegative, then we could just check
+     * the sign bit. Sign we have to account for 0, we need to look at the
+     * edge case where the sign bit flips (0 and tmin). If we subtract one
+     * and the sign before and after is 0, then x > 0.*/
+    int sign = x >> 31;
+    int zero_sign = (x - 1) >> 31;
+    return ~(sign | zero_sign) & 0x1;
 }
+
+
+
+
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
  *   Example: isLessOrEqual(4,5) = 1.
@@ -275,8 +299,15 @@ int isPositive(int x) {
  *   Points: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+    /* Check if x - y <= 0.
+     * 
+     */
+    return 2;
 }
+
+
+
+
 /* 
  * float_neg - Return bit-level equivalent of expression -f for
  *   floating point argument f.
@@ -290,6 +321,10 @@ int isLessOrEqual(int x, int y) {
 unsigned float_neg(unsigned uf) {
  return 2;
 }
+
+
+
+
 /* 
  * float_i2f - Return bit-level equivalent of expression (float) x
  *   Result is returned as unsigned int, but
@@ -302,6 +337,10 @@ unsigned float_neg(unsigned uf) {
 unsigned float_i2f(int x) {
   return 2;
 }
+
+
+
+
 /* 
  * float_twice - Return bit-level equivalent of expression 2*f for
  *   floating point argument f.
