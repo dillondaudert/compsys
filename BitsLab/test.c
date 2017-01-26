@@ -10,4 +10,5 @@ int main() {
   printf("divpwr2 result1: %d, 2: %d\n", divpwr2(15, 1), divpwr2(-33,4));
   printf("negate result: %d\n", negate(-10));
   printf("isPositive result: %d\n", isPositive(0));
+  printf("float_neg result: %x\n", float_neg(0x3FFFFFFF));
 }

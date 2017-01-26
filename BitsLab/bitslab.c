@@ -319,7 +319,11 @@ int isLessOrEqual(int x, int y) {
  *   Points: 4
  */
 unsigned float_neg(unsigned uf) {
- return 2;
+    /* Since the input unsigned int is the bit-level representation of a
+     * float, I just reverse the parity of the sign bit.
+     */
+    unsigned sign = 0x1 << 31;
+    return uf ^ sign;
 }
 
 
@@ -335,6 +339,35 @@ unsigned float_neg(unsigned uf) {
  *   Points: 4
  */
 unsigned float_i2f(int x) {
+    /* Iterate over the integer to calculate the floating point #
+     */
+
+    //Get the sign bit
+    int x_as_f = 0x0 | (x >> 31);
+    int exp = 127;
+    int mant = 
+    //Iterate over x (skipping sign), count exp and copy mantissa
+    x_tmp = x;
+    int b = 1;
+    int exp_found = 0;
+    while(b < 32){
+        x_tmp <<= 1;
+        x_as_f <<= 1;
+
+        if(!exp_found){
+            //If leading bit is nonzero, begin counting exponent
+            if((0x1 << (31-b))&x_tmp){
+                exp_found = 1;
+            }
+        }else{
+            //Leading bit found
+            exp += 1;
+
+        }
+
+        b += 1;
+    }
+
   return 2;
 }
 
