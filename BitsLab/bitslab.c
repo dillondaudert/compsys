@@ -126,6 +126,11 @@ int bitAnd(int x, int y) {
     /*Use the fact that ~(a ^ b) = ~a v ~b*/
     return ~(~x | ~y);
 }
+
+
+
+
+
 /* 
  * getByte - Extract byte n from word x
  *   Bytes numbered from 0 (LSB) to 3 (MSB)
@@ -135,10 +140,17 @@ int bitAnd(int x, int y) {
  *   Points: 2
  */
 int getByte(int x, int n) {
-    int a = 255;
-    
-    return 2;
+    /*Shift by 8*2^n bits for the correct byte, and & with 0xFF*/
+    int byte_mask = 0xFF;
+    x >>= ((3 - n) << 3);
+
+    return x & byte_mask;
 }
+
+
+
+
+
 /* 
  * logicalShift - shift x to the right by n, using a logical shift
  *   Can assume that 0 <= n <= 31
@@ -148,9 +160,20 @@ int getByte(int x, int n) {
  *   Points: 3 
  */
 int logicalShift(int x, int n) {
-    /*Use the right shift operator*/
-    return x >> n;
+    /*Use shifts on a mask and take its complement. 
+     * Split the mask shifts into two parts to avoid shifting 
+     * by the word size.*/
+    int mask = ~0x0;
+    x >>= n;
+    mask <<= (32 - n - 1);
+    mask <<= 1;
+    return x & ~mask;
 }
+
+
+
+
+
 /*
  * bitCount - returns count of number of 1's in word
  *   Examples: bitCount(5) = 2, bitCount(7) = 3
@@ -161,6 +184,9 @@ int logicalShift(int x, int n) {
 int bitCount(int x) {
   return 2;
 }
+
+
+
 /* 
  * bang - Compute !x without using !
  *   Examples: bang(3) = 0, bang(0) = 1
@@ -169,8 +195,22 @@ int bitCount(int x) {
  *   Points: 4 
  */
 int bang(int x) {
-  return 2;
+    /* Logical Or the halves of x together, reducing down to the least 
+     * significant bit having 1 if x != 0. Logical And with 1 to get rid
+     * of the rest of the bits in the number, and XOR for final answer.
+     */
+    int byte2 = x | (x >> 16);
+    int byte1 = byte2 | (byte2 >> 8);
+    int bit4 = byte1 | (byte1 >> 4);
+    int bit2 = bit4 | (bit4 >> 2);
+    int bit1 = bit2 | (bit2 >> 1);
+
+    return (bit1 & 1) ^ 1;
 }
+
+
+
+
 /* 
  * tmin - return minimum two's complement integer 
  *   Legal ops: ! ~ & ^ | + << >>
@@ -178,8 +218,12 @@ int bang(int x) {
  *   Points: 1
  */
 int tmin(void) {
-  return 2;
+    return 0x1 << 31;
 }
+
+
+
+
 /* 
  * fitsBits - return 1 if x can be represented as an 
  *  n-bit, two's complement integer.
