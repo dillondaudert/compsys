@@ -15,4 +15,5 @@ int main() {
   printf("float_i2f result: %x\n", float_i2f(100000));
   printf("float_i2f result: %x\n", float_i2f(0));
   printf("float_twice result: %x\n", float_twice(0x3dcccccd));
+  printf("bitcount result: %d\n", bitCount(7));
 }

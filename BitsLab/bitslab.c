@@ -182,7 +182,43 @@ int logicalShift(int x, int n) {
  *   Points: 4
  */
 int bitCount(int x) {
-  return 2;
+    /* Brute force since I can't think of any other way
+     *
+     */
+    int bit_count = 0;
+    bit_count += (0x1 & x);
+    bit_count += ((0x1 << 1) & x) >> 1;
+    bit_count += ((0x1 << 2) & x) >> 2;
+    bit_count += ((0x1 << 3) & x) >> 3;
+    bit_count += ((0x1 << 4) & x) >> 4;
+    bit_count += ((0x1 << 5) & x) >> 5;
+    bit_count += ((0x1 << 6) & x) >> 6;
+    bit_count += ((0x1 << 7) & x) >> 7;
+    bit_count += ((0x1 << 8) & x) >> 8;
+    bit_count += ((0x1 << 9) & x) >> 9;
+    bit_count += ((0x1 << 10) & x) >> 10;
+    bit_count += ((0x1 << 11) & x) >> 11;
+    bit_count += ((0x1 << 12) & x) >> 12;
+    bit_count += ((0x1 << 13) & x) >> 13;
+    bit_count += ((0x1 << 14) & x) >> 14;
+    bit_count += ((0x1 << 15) & x) >> 15;
+    bit_count += ((0x1 << 16) & x) >> 16;
+    bit_count += ((0x1 << 17) & x) >> 17;
+    bit_count += ((0x1 << 18) & x) >> 18;
+    bit_count += ((0x1 << 19) & x) >> 19;
+    bit_count += ((0x1 << 20) & x) >> 20;
+    bit_count += ((0x1 << 21) & x) >> 21;
+    bit_count += ((0x1 << 22) & x) >> 22;
+    bit_count += ((0x1 << 23) & x) >> 23;
+    bit_count += ((0x1 << 24) & x) >> 24;
+    bit_count += ((0x1 << 25) & x) >> 25;
+    bit_count += ((0x1 << 26) & x) >> 26;
+    bit_count += ((0x1 << 27) & x) >> 27;
+    bit_count += ((0x1 << 28) & x) >>28;
+    bit_count += ((0x1 << 29) & x) >>29;
+    bit_count += ((0x1 << 30) & x) >> 30;
+    bit_count += ((0x1 << 31) & x) >> 31;
+    return bit_count;
 }
 
 
@@ -306,7 +342,7 @@ int isLessOrEqual(int x, int y) {
     /* Check if 0 <= y + x.
      * Add x to y and return the opposite of the sign bit
      */
-    y += x;
+    y -= x;
 
     return !(y & (0x1 << 31));
 }
