@@ -11,4 +11,6 @@ int main() {
   printf("negate result: %d\n", negate(-10));
   printf("isPositive result: %d\n", isPositive(0));
   printf("float_neg result: %x\n", float_neg(0x3FFFFFFF));
+  printf("float_i2f result: %x\n", float_i2f(100000));
+  printf("float_i2f result: %x\n", float_i2f(0));
 }

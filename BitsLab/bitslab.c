@@ -342,33 +342,53 @@ unsigned float_i2f(int x) {
     /* Iterate over the integer to calculate the floating point #
      */
 
-    //Get the sign bit
-    int x_as_f = 0x0 | (x >> 31);
-    int exp = 127;
-    int mant = 
-    //Iterate over x (skipping sign), count exp and copy mantissa
-    x_tmp = x;
-    int b = 1;
-    int exp_found = 0;
-    while(b < 32){
-        x_tmp <<= 1;
-        x_as_f <<= 1;
+    unsigned x_as_f;
 
-        if(!exp_found){
-            //If leading bit is nonzero, begin counting exponent
-            if((0x1 << (31-b))&x_tmp){
-                exp_found = 1;
-            }
-        }else{
-            //Leading bit found
-            exp += 1;
-
-        }
-
-        b += 1;
+    //If the integer is negative, need to do 2's complement
+    if(x < 0){
+        //set sign bit
+        x_as_f = 0x80000000;
+        //Set x to positive value
+        x = -x;
+    }else{
+        x_as_f = 0x0;
     }
 
-  return 2;
+    //Iterate over x (skipping sign), count exp and copy mantissa
+    int x_tmp = x;
+    int lead_pos = 1;
+    int lead_found = 0;
+    int exp = 0;
+
+    while(lead_pos <= 32){
+        //If we haven't found the leading bit yet, decrement the exponent
+        //Since only 23 of the bits in the mantissa can be copied, decrement
+        if(!lead_found){
+            if((0x1 << (32-lead_pos))&x_tmp){
+                //set leading 1 to 0
+                x_tmp ^= (0x1 << (32-lead_pos));
+                lead_found = 1;
+                exp = 32 - lead_pos;
+                printf("exp: %x, mant: %x\n", exp, x_tmp);
+            }
+        }
+        lead_pos += 1;
+    }
+
+    int mant_offset = 32 - exp - 9;
+    if(exp != 0) {exp += 127;}
+    
+    //OR mantissa into the FP number
+    if(mant_offset < 0) {
+        x_as_f |= (x_tmp >> -mant_offset);
+    }else{
+        x_as_f |= (x_tmp<<mant_offset);
+    }
+
+    //OR exponent into FP number
+    x_as_f |= (exp << 23);
+
+  return x_as_f;
 }
 
 
