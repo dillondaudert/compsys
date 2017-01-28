@@ -234,6 +234,9 @@ int tmin(void) {
  *   Points: 2
  */
 int fitsBits(int x, int n) {
+    /* 5, 3 = 00000101, 000
+     *-4, 3 = 11111100, 000
+     */
   return 2;
 }
 
@@ -249,7 +252,8 @@ int fitsBits(int x, int n) {
  *   Points: 2
  */
 int divpwr2(int x, int n) {
-    return x >> n;
+    int sign = 0x1 & (x >> 31);
+    return (x >> n) + sign;
 }
 
 
@@ -280,7 +284,7 @@ int negate(int x) {
  */
 int isPositive(int x) {
     /* If we were only looking at nonnegative, then we could just check
-     * the sign bit. Sign we have to account for 0, we need to look at the
+     * the sign bit. Since we have to account for 0, we need to look at the
      * edge case where the sign bit flips (0 and tmin). If we subtract one
      * and the sign before and after is 0, then x > 0.*/
     int sign = x >> 31;
@@ -299,10 +303,12 @@ int isPositive(int x) {
  *   Points: 3
  */
 int isLessOrEqual(int x, int y) {
-    /* Check if x - y <= 0.
-     * 
+    /* Check if 0 <= y + x.
+     * Add x to y and return the opposite of the sign bit
      */
-    return 2;
+    y += x;
+
+    return !(y & (0x1 << 31));
 }
 
 
@@ -369,7 +375,6 @@ unsigned float_i2f(int x) {
                 x_tmp ^= (0x1 << (32-lead_pos));
                 lead_found = 1;
                 exp = 32 - lead_pos;
-                printf("exp: %x, mant: %x\n", exp, x_tmp);
             }
         }
         lead_pos += 1;
@@ -388,7 +393,7 @@ unsigned float_i2f(int x) {
     //OR exponent into FP number
     x_as_f |= (exp << 23);
 
-  return x_as_f;
+    return x_as_f;
 }
 
 
@@ -405,5 +410,31 @@ unsigned float_i2f(int x) {
  *   Points: 4
  */
 unsigned float_twice(unsigned uf) {
-  return 2;
+    /*
+     * For normalized, add 1 to exponent
+     * For denormalized, shift mantissa 1
+     *
+     */
+    
+    //Extract exponent and mantissa
+    int exp = (0xFF << 23) & uf;
+    int mant = 0x007FFFFF & uf;
+    printf("exp: %x, mant: %x\n", exp, mant);
+    exp >>= 23;
+
+
+    if(exp == 0){//Denormalized
+        mant <<= 1;
+        uf &= 0xFF800000;
+        uf |= mant;
+        
+    }else if((exp + 1)%256 > exp){
+        exp += 1;
+        printf("exp+1=%x\n", exp<<23);
+        uf &= (0x807FFFFF);
+        uf |=(exp<<23);
+    }
+
+
+    return uf;
 }
