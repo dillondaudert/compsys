@@ -1,5 +1,9 @@
 ##Cache Lab project plan, specification, design draft
 
+###References
+- [YouTube PlayList on Caches](https://www.youtube.com/watch?v=chnhnxWIjgw&list=PLbtzT1TYeoMgJ4NcWFuXpnF24fsiaOdGq&index=1)
+- [The Open Group Group Specifications, getopt()](http://pubs.opengroup.org/onlinepubs/9699919799/)
+
 ###Overall Goal
 Write a cache simulator that keeps track of hits, misses, and evictions
 
@@ -68,6 +72,30 @@ hits:4 misses:5 evictions:3```
 - output function
 
 ####Command Line Argument Parser
+Use getopt() from unistd.h to parse the proper flags
+```int getopt(int argc, char * const argv[], const char *optstring);
+extern char *optarg;
+extern int optind, opterr, optopt;
+```
+
+_optstring_ is a string containing the valid characters, with characters followed by a colon indicating that an argument is required.
+`char *optstring = ":hvs:E:b:t:"`
+The option switch statement will looking something along these lines:
+```C
+int c;
+while (c = getopt(argc, argv, optstring) != -1){
+  switch(c){
+    case '?':
+      //invalid option, print usage and exit
+      break;
+    case ':':
+      //option missing argument, print usage and exit
+      break;
+    case ...
+  }
+}
+  
+```
 
 ####Trace File IO
 
@@ -90,6 +118,15 @@ Cache Read (given an address 64 bits: [tag | set index | block offset])
 - check the tags of all *valid* lines in set (line: [valid | tag | block bytes])
 - if tag matches, then *hit*
 - if no tag matched, then *miss*
-  - replace the *least recently used* line
+  - replace the *least recently used* line (update valid bit and tag in this case)
+  
+Cache Write
+- search cache for block
+- if found in cache:
+  - write-through: modify block and write to memory
+  - write-back: modify block, flag dirty bit, and write to memory once evicted (_typical_)
+- if not found in cache:
+  - write-allocate: read block into the cache, update copy in cache, flag dirty bit (_typical_)
+  - write-no-allocate: send the write on through to memory, do not load into cache
 
 ####Output Function
