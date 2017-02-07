@@ -15,7 +15,8 @@ contains all the code, described in the simulator section
 a collection of reference trace files used to evaluate correctness of the simulator
 
 the format is:
-```[space]operation address,size```
+```[space]operation address,size
+```
 
 `operation` denotes the type of memory access:
 - "I" instruction load
@@ -40,7 +41,7 @@ Usage: `./csim [-hv] -s <s> -E <E> -b <b> -t <tracefile>`
 - `-h`: Optional help flag that prints usage info
 - `-v`: Optional verbose flag that displays trace info
 - `-s <s>`: Number of set index bits (_S_ = 2^_s_ is the number of sets)
-- `E <E>`: Associativity (number of lines per set)
+- `-E <E>`: Associativity (number of lines per set)
 - `-b <b>`: Number of block bits (_B_ = 2^_b_ is the block size)
 - `-t <tracefile>`: Name of the `trace/*` file to replay
 
@@ -59,7 +60,8 @@ S 18,1 hit
 
 ...
 
-hits:4 misses:5 evictions:3```
+hits:4 misses:5 evictions:3
+```
 
 
 ###Cache Simulator Design Outline
@@ -110,7 +112,8 @@ In addition, each line requires a valid bit denoting whether or not valid memory
 
 So the lines of each set of the cache will end up looking like:
 
-```[valid | tag | block bytes] [valid | tag | block bytes] ...```
+```[valid | tag | block bytes] [valid | tag | block bytes] ...
+```
 
 #####Cache Operations
 Cache Read (given an address 64 bits: [tag | set index | block offset])
