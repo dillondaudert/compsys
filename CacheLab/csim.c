@@ -1,3 +1,9 @@
+//Date: 2/13/2017
+//Class: CS 5541
+//Assignment: Assignment 3 CacheLab
+//Author: Dillon Daudert
+
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,7 +84,7 @@ void simCache(Cache *my_cache, char *tracefile)
                 if(my_cache->m_flag)
                     printf("miss ");
                 if(my_cache->e_flag)
-                    printf("evict ");
+                    printf("eviction ");
                 printf("\n");
             }
             break;
@@ -91,7 +97,7 @@ void simCache(Cache *my_cache, char *tracefile)
                 if(my_cache->m_flag)
                     printf("miss ");
                 if(my_cache->e_flag)
-                    printf("evict ");
+                    printf("eviction ");
                 printf("\n");
             }
             break;
@@ -104,7 +110,7 @@ void simCache(Cache *my_cache, char *tracefile)
                 if(my_cache->m_flag)
                     printf("miss ");
                 if(my_cache->e_flag)
-                    printf("evict ");
+                    printf("eviction ");
             }
 
             my_cache->h_flag = my_cache->m_flag = my_cache->e_flag = 0;
@@ -115,7 +121,7 @@ void simCache(Cache *my_cache, char *tracefile)
                 if(my_cache->m_flag)
                     printf("miss ");
                 if(my_cache->e_flag)
-                    printf("evict ");
+                    printf("eviction ");
                 printf("\n");
             }
             break;
