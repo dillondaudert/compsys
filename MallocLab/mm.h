@@ -4,7 +4,7 @@ extern int mm_init (void);
 extern void *mm_malloc (size_t size);
 extern void mm_free (void *ptr);
 extern void *mm_realloc(void *ptr, size_t size);
-
+extern int mm_check (void);
 
 /* 
  * Students work in teams of one or two.  Teams enter their team name, 
@@ -21,3 +21,6 @@ typedef struct {
 
 extern team_t team;
 
+/* error defines for mm_check clarity */
+#define CONTIGUOUS_FREE 1
+#define HEAPSIZE_MISMATCH 2
