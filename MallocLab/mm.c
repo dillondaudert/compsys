@@ -32,7 +32,7 @@ team_t team = {
 };
 
 /* mm_check debug flag */
-#define DEBUG 1
+#define DEBUG 0
 /* mm_check verbose debug flag */
 #define DEBUG_V 0
 
@@ -107,15 +107,16 @@ void *mm_malloc(size_t size)
         newsize = MIN_SIZE;
     void *curr_block = FREE_HEAD;
     void *new_payld;
-    if (DEBUG) {
-        fprintf(stderr, "malloc called for block of size %u\n", newsize);
-    }
 
     /* look for first-fit block in the free list */
     for (i = 0; i < FREE_LENGTH; i++) {
         if (size(curr_block) >= newsize) {
             /* remove the block from the list */
             _mm_remove_link(curr_block);
+            FREE_LENGTH--;
+            if (DEBUG) {
+                fprintf(stderr, "MALLOC: block size %u | free length: %d\n", size(curr_block), FREE_LENGTH);
+            }
 
             /* mark removed block as allocated */
             *(size_t *)curr_block |= 0x1;
@@ -129,9 +130,6 @@ void *mm_malloc(size_t size)
                     exit(err);
                 }
             }
-            if (DEBUG) {
-                fprintf(stderr, "\tgiven size %u\n", size(header(new_payld)));
-            }
             return new_payld;
         }
         /* not found yet, check next one */
@@ -140,6 +138,8 @@ void *mm_malloc(size_t size)
     
     /* in this case, no item in list was found, so incr heap */
     new_payld = _mm_incr_heap(newsize);
+
+
     if (DEBUG) {
         int err = mm_check();
         if (err != 0) {
@@ -163,7 +163,7 @@ void mm_free(void *ptr)
     void *freed_block, *prev_block, *next_block;
     freed_block = header(ptr);
     if (DEBUG) {
-        fprintf(stderr, "free called for block of size %u\n", size(freed_block));
+        fprintf(stderr, "FREE: block size %u | free length: %d\n", size(freed_block), FREE_LENGTH);
     }
     prev_block = prev_header(freed_block);
     next_block = next_header(freed_block);
@@ -173,52 +173,71 @@ void mm_free(void *ptr)
     if ((!(prev_block < mem_heap_lo()) && !is_alloc(prev_block)) 
         && (!(next_block >= mem_heap_hi()) && !is_alloc(next_block))) {
         if (DEBUG) 
-            fprintf(stderr, "Coalescing with previous -");
-        if (DEBUG) 
-            fprintf(stderr, "Coalescing with next, address %p", next_block);
+            fprintf(stderr, "~ COALESCE previous and next ");
 
-        /* remove next */
+        /* remove all blocks from free list */
+        _mm_remove_link(prev_block);
         _mm_remove_link(next_block);
 
         /* update sizes; header of prev, footer of next */
         new_size = size(prev_block) + size(freed_block) + size(next_block);
-        freed_block = prev_block;
-        *(size_t *)freed_block = new_size;
-        *(size_t *)footer(freed_block) = new_size;
+        *(size_t *)prev_block = new_size;
+        *(size_t *)footer(next_block) = new_size;
+        _mm_insert_link(prev_block);
+        /* because we are removing two links and replacing with one, decrement count */
+        FREE_LENGTH--;
+        if (DEBUG_V) {
+            fprintf(stderr, "INSERT block size (header/footer): %u/%u, new free length: %d\n", size(prev_block), size(footer(prev_block)), FREE_LENGTH);
+        }
 
 
 
     }else if (!(prev_block < mem_heap_lo()) && !is_alloc(prev_block)) {
         /* coalesce with previous contiguous block */
         if (DEBUG) 
-            fprintf(stderr, "Coalescing with previous -");
+            fprintf(stderr, "~ COALESCE previous ");
 
         _mm_remove_link(prev_block);
 
         new_size = size(freed_block) + size(prev_block);
-        freed_block = prev_block;
+        
         /* update prev header, freed_block footer with new size */
-        *((size_t *)freed_block) = new_size;
-        *((size_t *)footer(freed_block)) = new_size;
+        *(size_t *)prev_block = new_size;
+        *(size_t *)footer(freed_block) = new_size;
 
-        _mm_insert_link(freed_block);
+        if (DEBUG_V) {
+            fprintf(stderr, "INSERT block size (header/footer): %u/%u, new free length: %d\n", size(prev_block), size(footer(prev_block)), FREE_LENGTH);
+        }
+
+        _mm_insert_link(prev_block);
+        /* we coalesced, so do not increment or decrement count */
 
     } else if (!(next_block >= mem_heap_hi()) && !is_alloc(next_block)) {
         /* coalesce with next contiguous block */
         if (DEBUG) 
-            fprintf(stderr, "Coalescing with next ");
+            fprintf(stderr, "~ COALESCE next ");
         
         _mm_remove_link(next_block);
-        FREE_LENGTH += 1; //Hack
 
         new_size = size(freed_block) + size(next_block);
         /* update freed_block header, next_block footer with new size */
-        *((size_t *)freed_block) = new_size;
-        *((size_t *)footer(freed_block)) = new_size;
+        *(size_t *)freed_block = new_size;
+        *(size_t *)footer(next_block) = new_size;
+
+
+        _mm_insert_link(freed_block);
+        if (DEBUG_V) {
+            fprintf(stderr, "INSERT block size (header/footer): %u/%u, new free length: %d\n", size(freed_block), size(footer(freed_block)), FREE_LENGTH);
+        }
 
     /* if there was no coalescing, add to beginning of free list */ 
     } else {
         _mm_insert_link(freed_block);
+        /* increment count */
+        FREE_LENGTH++;
+        if (DEBUG_V) {
+            fprintf(stderr, "~ INSERT block size (header, footer): %u/%u, new free length: %d\n", size(freed_block), size(footer(freed_block)), FREE_LENGTH);
+        }
         
     }
 
@@ -230,8 +249,8 @@ void mm_free(void *ptr)
         }
     }
 
+    /* NULL the user pointer */
     ptr = NULL;
-    
 }
 
 /*
@@ -239,34 +258,28 @@ void mm_free(void *ptr)
  */
 void _mm_remove_link(void *rem_block)
 {
-    if (DEBUG) {
-        fprintf(stderr, "**removing links -\n");
-    }
     /* if this was the last link, set FREE_HEAD to null */
-    if (FREE_LENGTH == 1) {
+    if ((rem_block == FREE_HEAD) && (FREE_LENGTH == 1)) {
         FREE_HEAD = NULL;
-    } else if (FREE_LENGTH == 2) {
-        /* only the item to remove and one other thing */
-        void *other_link = (void *)(*next_ptr(rem_block));
-        fprintf(stderr, "other is %p", rem_block);
-        *next_ptr(other_link) = (size_t *)other_link;
-        *prev_ptr(other_link) = (size_t *)other_link;
-        FREE_HEAD = other_link;
+        if (DEBUG_V) {
+            fprintf(stderr, "~ FREE_HEAD is now NULL\n");
+        }
+    } else if (*next_ptr(rem_block) == *prev_ptr(rem_block)) {
+        /* two items in list, remove rem_block and set other to HEAD */
+        FREE_HEAD = (void *)(*next_ptr(rem_block));
+        *next_ptr(FREE_HEAD) = (size_t *)FREE_HEAD;
+        *prev_ptr(FREE_HEAD) = (size_t *)FREE_HEAD;
 
     } else {
-        void *precede_link = (void *)(*prev_ptr(rem_block));
-        void *follow_link = (void *)(*next_ptr(rem_block));
-        if (precede_link == NULL){
-            fprintf(stderr, "precede is null, rem_block is %u", size(rem_block));
+        void *next_link = (void *)(*next_ptr(rem_block));
+        void *prev_link = (void *)(*prev_ptr(rem_block));
+        /* if we are removing the current head, replace */
+        if (rem_block == FREE_HEAD) {
+            FREE_HEAD = next_link;
         }
-        if (follow_link == NULL){
-            fprintf(stderr, "follow is null, rem_block is %u", size(rem_block));
-        }
-        *next_ptr(precede_link) = (size_t *)follow_link;
-        *prev_ptr(follow_link) = (size_t *)precede_link;
+        *next_ptr(prev_link) = (size_t *)next_link;
+        *prev_ptr(next_link) = (size_t *)prev_link;
     }
-    FREE_LENGTH -= 1;
-
 }
 
 /*
@@ -274,19 +287,19 @@ void _mm_remove_link(void *rem_block)
  */
 void _mm_insert_link(void *add_block) 
 {
-    /* update header and footer to indicate free */
+    /* set allocated flag to false */
     *(size_t *)add_block &= ~0x1;
     *(size_t *)footer(add_block) &= ~0x1;
 
     /* if the list is empty, set FREE_HEAD to new block */
-    if (FREE_LENGTH == 0) {
+    if (FREE_HEAD == NULL) {
         FREE_HEAD = add_block;
-        /* must make sure that links point correctly! */
+        /* next, prev pointers to itself */
         *next_ptr(FREE_HEAD) = (size_t *)FREE_HEAD;
         *prev_ptr(FREE_HEAD) = (size_t *)FREE_HEAD;
 
-    } else if (FREE_LENGTH == 1) {
-        /* two links to modify */
+    } else if (((void *)*next_ptr(FREE_HEAD)) == FREE_HEAD) {
+        /* only HEAD in the list, add new block */
         *next_ptr(FREE_HEAD) = (size_t *)add_block;
         *prev_ptr(FREE_HEAD) = (size_t *)add_block;
         *next_ptr(add_block) = (size_t *)FREE_HEAD;
@@ -294,21 +307,17 @@ void _mm_insert_link(void *add_block)
     } else {
         /* three links to modify: last, curr, first */
         void *last_link = (void *)(*prev_ptr(FREE_HEAD));
-        void *first_link = FREE_HEAD;
         
-        /* update freed_block pointers */
-        *next_ptr(add_block) = (size_t *)first_link;
+        /* update new block pointers */
+        *next_ptr(add_block) = (size_t *)FREE_HEAD;
         *prev_ptr(add_block) = (size_t *)last_link;
 
         /* update last link pointer */
         *next_ptr(last_link) = (size_t *)add_block;
 
         /* update first link pointer */
-        *prev_ptr(first_link) = (size_t *)add_block;
-
-        FREE_HEAD = add_block;
+        *prev_ptr(FREE_HEAD) = (size_t *)add_block;
     }
-    FREE_LENGTH += 1;
 }
 
 /*
@@ -320,9 +329,12 @@ void *_mm_incr_heap(size_t size)
 {
     /* for now, just increment by the size of the request */
     void *block = mem_sbrk(size);
-    if (block == (void *)-1)
+    if (block == (void *)-1) {
+        if (DEBUG) {
+            fprintf(stderr, "mem_sbrk returned -1, no further heap available!\n");
+        }
         return NULL;
-    else {
+    } else {
         *(size_t *)block = size + 1;
         void *payld = (void *)((char *)block + SIZE_T_SIZE);
         *(size_t *)footer(block) = size + 1;
@@ -342,7 +354,7 @@ void *mm_realloc(void *ptr, size_t size)
     newptr = mm_malloc(size);
     if (newptr == NULL)
       return NULL;
-    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
+    copySize = size(oldptr);
     if (size < copySize)
       copySize = size;
     memcpy(newptr, oldptr, copySize);
@@ -360,6 +372,7 @@ int mm_check()
     void *curr_block, *next_block;
     curr_block = FREE_HEAD;
     if (curr_block != NULL) {
+        list_count++;
         /* check that HEAD is valid */
         if (is_alloc(curr_block) || is_alloc(footer(curr_block))){
             fprintf(stderr, "FREE_HEAD points to invalid block: [%u|%d/%u|%d]\n",
@@ -377,7 +390,7 @@ int mm_check()
 
         next_block = (void *)(*next_ptr(FREE_HEAD));
 
-        while ((curr_block != next_block) && (list_count <= FREE_LENGTH)) {
+        while (list_count < FREE_LENGTH) {
             curr_block = next_block;
             next_block = (void *)(*next_ptr(curr_block));
             /* check that curr is valid */
@@ -438,6 +451,14 @@ int mm_check()
             fprintf(stderr, "counted length: %u, expected: %u\n", free_count, FREE_LENGTH);
         }
         return LENGTH_MISMATCH;
+    }
+
+    if (list_count != free_count) {
+        if (DEBUG_V) {
+            fprintf(stderr, "free list contained: %u, heap contained: %u\n", list_count, free_count);
+        }
+        return UNLISTED_FREE;
+    
     }
 
     return 0;

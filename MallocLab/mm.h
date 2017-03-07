@@ -29,3 +29,4 @@ extern team_t team;
 #define HEAPSIZE_MISMATCH 2
 #define LENGTH_MISMATCH 3
 #define INVALID_FREE_PTR 4
+#define UNLISTED_FREE 5

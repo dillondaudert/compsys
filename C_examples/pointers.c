@@ -70,9 +70,9 @@ int main(void)
     *next_ptr(block3) = NULL;
     *prev_ptr(block3) = (size_t *)block2;
 
-    printf("The following pairs should be equal:\n block1: %p, block2_prev: %p\n\
-            block2: %p, block1_next: %p, block3_prev: %p\n \
-            block3: %p, block2_next: %p\n", block1, *prev_ptr(block2), block2, *next_ptr(block1),
+    printf("The following pairs should be equal:\nblock1: %p, block2_prev: %p\n"
+            "block2: %p, block1_next: %p, block3_prev: %p\n" 
+            "block3: %p, block2_next: %p\n", block1, *prev_ptr(block2), block2, *next_ptr(block1),
             *prev_ptr(block3), block3, *next_ptr(block2));
 
     /* test removing block2 from the list */
@@ -83,6 +83,10 @@ int main(void)
 
     printf("Now, block1: %p, block2: %p, block3: %p\nblock1_next: %p, block3_prev: %p\n",
         block1, block2, block3, *next_ptr(block1), *prev_ptr(block3));
+
+    if (((void *)*next_ptr(block1)) == block3){
+        printf("Block1.next same as block 3!\n");
+    }
 
     free(my_stack);
     free(my_stack2);
