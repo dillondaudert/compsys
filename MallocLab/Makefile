@@ -2,7 +2,7 @@
 # Students' Makefile for the Malloc Lab
 #
 CC = gcc
-CFLAGS = -g -Wall -O2 -m32
+CFLAGS = -g -Wall -O2 -m32 -pg
 
 OBJS = mdriver.o mm.o memlib.o fsecs.o fcyc.o clock.o ftimer.o
 

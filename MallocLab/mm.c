@@ -87,7 +87,13 @@ int mm_init(void)
     FREE_HEAD = NULL;
     FREE_LENGTH = 0;
     /* Initialize the first block of the free list */
-    mm_free(mm_malloc(MIN_SIZE));
+    void *newmem;
+    newmem = mm_malloc(MIN_SIZE);
+
+    if(newmem == NULL)
+        return -1;
+
+    mm_free(newmem);
 
     if (DEBUG) {
         int err = mm_check();
@@ -125,7 +131,6 @@ void *mm_malloc(size_t size)
                 curr_block = next_header(remain_block);
                 *(size_t *)curr_block = newsize;
                 *(size_t *)footer(curr_block) = newsize;
-
 
 
 
@@ -350,19 +355,47 @@ void *_mm_incr_heap(size_t size)
  */
 void *mm_realloc(void *ptr, size_t size)
 {
-    void *oldptr = ptr;
-    void *newptr;
-    size_t copySize;
+
+    if (ptr == NULL) {
+        return mm_malloc(size);
+    } else if (size == 0) {
+        mm_free(ptr);
+        return NULL;
+    }
+
+    void *block = header(ptr);
+
+    size_t newsize = ALIGN(size) + 2*SIZE_T_SIZE;
+    if (newsize < MIN_SIZE)
+        newsize = MIN_SIZE;
+
+    if (size(block) >= newsize) {
+        /* CONTRACT BLOCK */
+        size_t excess_size = size(block) - newsize;
+        if (excess_size >= MIN_SIZE) {
+            /* split off and free excess */
+            *(size_t *)block = newsize + 1;
+            *(size_t *)footer(block) = newsize + 1;
+
+            void *excess_block = next_header(block);
+            *(size_t *)excess_block = excess_size;
+            *(size_t *)footer(excess_block) = excess_size;
+            void *excess_ptr = (void *)((char *)excess_block + SIZE_T_SIZE);
+            mm_free(excess_ptr);
+        }
+        return ptr;
+    } else {
+        /* EXPAND BLOCK */
+        void *newptr = mm_malloc(newsize);
+        if (newptr == NULL)
+          return NULL;
+
+        /* size(block) < newsize */
+        memcpy(newptr, ptr, size(block));
+        mm_free(ptr);
+        return newptr;
     
-    newptr = mm_malloc(size);
-    if (newptr == NULL)
-      return NULL;
-    copySize = size(oldptr);
-    if (size < copySize)
-      copySize = size;
-    memcpy(newptr, oldptr, copySize);
-    mm_free(oldptr);
-    return newptr;
+    }
 }
 
 
