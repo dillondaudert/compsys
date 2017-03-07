@@ -18,6 +18,9 @@
 
 #define next_header(block) (void *)((char *)block + (*((size_t *)block) & ~0x7))
 
+#define next_ptr(block) (size_t **)((char *)block + SIZE_T_SIZE)
+#define prev_ptr(block) (size_t **)((char *)block + 2*SIZE_T_SIZE)
+
 void *my_malloc(size_t num_bytes);
 int mm_check(void *, void *);
 
@@ -55,6 +58,31 @@ int main(void)
     *((size_t *)((char *)my_stack2 + 13*SIZE_T_SIZE)) = 4*SIZE_T_SIZE;
 
     mm_check(my_stack2, end_stack2);
+
+    void *block1 = my_stack2;
+    void *block2 = (void *)((char *)my_stack2 + 4*SIZE_T_SIZE);
+    void *block3 = (void *)((char *)my_stack2 + 10*SIZE_T_SIZE);
+
+    *next_ptr(block1) = (size_t *)block2;
+    *prev_ptr(block1) = NULL;
+    *next_ptr(block2) = (size_t *)block3;
+    *prev_ptr(block2) = (size_t *)block1;
+    *next_ptr(block3) = NULL;
+    *prev_ptr(block3) = (size_t *)block2;
+
+    printf("The following pairs should be equal:\n block1: %p, block2_prev: %p\n\
+            block2: %p, block1_next: %p, block3_prev: %p\n \
+            block3: %p, block2_next: %p\n", block1, *prev_ptr(block2), block2, *next_ptr(block1),
+            *prev_ptr(block3), block3, *next_ptr(block2));
+
+    /* test removing block2 from the list */
+    void *precede_link = (void *)(*prev_ptr(block2));
+    void *follow_link = (void *)(*next_ptr(block2));
+    *next_ptr(precede_link) = (size_t *)follow_link;
+    *prev_ptr(follow_link) = (size_t *)precede_link;
+
+    printf("Now, block1: %p, block2: %p, block3: %p\nblock1_next: %p, block3_prev: %p\n",
+        block1, block2, block3, *next_ptr(block1), *prev_ptr(block3));
 
     free(my_stack);
     free(my_stack2);

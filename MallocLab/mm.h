@@ -5,6 +5,9 @@ extern void *mm_malloc (size_t size);
 extern void mm_free (void *ptr);
 extern void *mm_realloc(void *ptr, size_t size);
 extern int mm_check (void);
+extern void *_mm_incr_heap(size_t size);
+extern void _mm_insert_link(void *);
+extern void _mm_remove_link(void *);
 
 /* 
  * Students work in teams of one or two.  Teams enter their team name, 
@@ -24,3 +27,5 @@ extern team_t team;
 /* error defines for mm_check clarity */
 #define CONTIGUOUS_FREE 1
 #define HEAPSIZE_MISMATCH 2
+#define LENGTH_MISMATCH 3
+#define INVALID_FREE_PTR 4
