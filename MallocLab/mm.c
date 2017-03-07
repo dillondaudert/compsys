@@ -33,8 +33,11 @@ team_t team = {
 
 /* mm_check debug flag */
 #define DEBUG 0
-/* mm_check verbose debug flag */
-#define DEBUG_V 0
+
+/* debug print statement */
+#define DEBUG_PRINTF(fmt, ...) \
+    do { if (DEBUG) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
+                            __LINE__, __func__, __VA_ARGS__); } while (0)
 
 /* single word (4) or double word (8) alignment */
 #define ALIGNMENT 8
@@ -88,10 +91,8 @@ int mm_init(void)
 
     if (DEBUG) {
         int err = mm_check();
-        if (err != 0) {
-            fprintf(stderr, "mm_init heap check returned: %d\n", err);
-            exit(err);
-        }
+        DEBUG_PRINTF("%s\n", _mm_error(err));
+        if (err != 0) exit(1);
     }
     return 0;
 }
@@ -114,9 +115,7 @@ void *mm_malloc(size_t size)
             /* remove the block from the list */
             _mm_remove_link(curr_block);
             FREE_LENGTH--;
-            if (DEBUG) {
-                fprintf(stderr, "MALLOC: block size %u | free length: %d\n", size(curr_block), FREE_LENGTH);
-            }
+            DEBUG_PRINTF("MALLOC: block size %u | free length: %d\n", size(curr_block), FREE_LENGTH);
 
             /* mark removed block as allocated */
             *(size_t *)curr_block |= 0x1;
@@ -125,10 +124,8 @@ void *mm_malloc(size_t size)
 
             if (DEBUG) {
                 int err = mm_check();
-                if (err != 0) {
-                    fprintf(stderr, "mm_check failed in malloc, error: %d\n", err);
-                    exit(err);
-                }
+                DEBUG_PRINTF("%s\n", _mm_error(err));
+                if (err != 0) exit(1);
             }
             return new_payld;
         }
@@ -142,10 +139,8 @@ void *mm_malloc(size_t size)
 
     if (DEBUG) {
         int err = mm_check();
-        if (err != 0) {
-            fprintf(stderr, "mm_check failed after incr_heap in malloc, error %d\n", err);
-            exit(err);
-        }
+        DEBUG_PRINTF("%s\n", _mm_error(err));
+        if (err != 0) exit(1);
     }
 
     return new_payld;
@@ -162,9 +157,9 @@ void mm_free(void *ptr)
     }
     void *freed_block, *prev_block, *next_block;
     freed_block = header(ptr);
-    if (DEBUG) {
-        fprintf(stderr, "FREE: block size %u | free length: %d\n", size(freed_block), FREE_LENGTH);
-    }
+
+    DEBUG_PRINTF("FREE: block size %u | free length: %d\n", size(freed_block), FREE_LENGTH);
+
     prev_block = prev_header(freed_block);
     next_block = next_header(freed_block);
     size_t new_size;
@@ -172,11 +167,11 @@ void mm_free(void *ptr)
     /* if both sides have free blocks */
     if ((!(prev_block < mem_heap_lo()) && !is_alloc(prev_block)) 
         && (!(next_block >= mem_heap_hi()) && !is_alloc(next_block))) {
-        if (DEBUG) 
-            fprintf(stderr, "~ COALESCE previous and next ");
+        if(DEBUG) fprintf(stderr, "~ COALESCE previous and next ");
 
         /* remove all blocks from free list */
         _mm_remove_link(prev_block);
+        FREE_LENGTH--;
         _mm_remove_link(next_block);
 
         /* update sizes; header of prev, footer of next */
@@ -185,17 +180,12 @@ void mm_free(void *ptr)
         *(size_t *)footer(next_block) = new_size;
         _mm_insert_link(prev_block);
         /* because we are removing two links and replacing with one, decrement count */
-        FREE_LENGTH--;
-        if (DEBUG_V) {
-            fprintf(stderr, "INSERT block size (header/footer): %u/%u, new free length: %d\n", size(prev_block), size(footer(prev_block)), FREE_LENGTH);
-        }
-
+        DEBUG_PRINTF("INSERT block size (header/footer): %u/%u, new free length: %d\n", size(prev_block), size(footer(prev_block)), FREE_LENGTH);
 
 
     }else if (!(prev_block < mem_heap_lo()) && !is_alloc(prev_block)) {
         /* coalesce with previous contiguous block */
-        if (DEBUG) 
-            fprintf(stderr, "~ COALESCE previous ");
+        if(DEBUG) fprintf(stderr, "~ COALESCE previous ");
 
         _mm_remove_link(prev_block);
 
@@ -205,17 +195,15 @@ void mm_free(void *ptr)
         *(size_t *)prev_block = new_size;
         *(size_t *)footer(freed_block) = new_size;
 
-        if (DEBUG_V) {
-            fprintf(stderr, "INSERT block size (header/footer): %u/%u, new free length: %d\n", size(prev_block), size(footer(prev_block)), FREE_LENGTH);
-        }
+        DEBUG_PRINTF("INSERT block size (header/footer): %u/%u, new free length: %d\n", size(prev_block), size(footer(prev_block)), FREE_LENGTH);
+        
 
         _mm_insert_link(prev_block);
         /* we coalesced, so do not increment or decrement count */
 
     } else if (!(next_block >= mem_heap_hi()) && !is_alloc(next_block)) {
         /* coalesce with next contiguous block */
-        if (DEBUG) 
-            fprintf(stderr, "~ COALESCE next ");
+        if(DEBUG) fprintf(stderr, "~ COALESCE next ");
         
         _mm_remove_link(next_block);
 
@@ -226,27 +214,21 @@ void mm_free(void *ptr)
 
 
         _mm_insert_link(freed_block);
-        if (DEBUG_V) {
-            fprintf(stderr, "INSERT block size (header/footer): %u/%u, new free length: %d\n", size(freed_block), size(footer(freed_block)), FREE_LENGTH);
-        }
+        DEBUG_PRINTF("INSERT block size (header/footer): %u/%u, new free length: %d\n", size(freed_block), size(footer(freed_block)), FREE_LENGTH);
 
     /* if there was no coalescing, add to beginning of free list */ 
     } else {
         _mm_insert_link(freed_block);
         /* increment count */
         FREE_LENGTH++;
-        if (DEBUG_V) {
-            fprintf(stderr, "~ INSERT block size (header, footer): %u/%u, new free length: %d\n", size(freed_block), size(footer(freed_block)), FREE_LENGTH);
-        }
+       DEBUG_PRINTF("~ INSERT block size (header, footer): %u/%u, new free length: %d\n", size(freed_block), size(footer(freed_block)), FREE_LENGTH);
         
     }
 
     if (DEBUG) {
         int err = mm_check();
-        if (err != 0) {
-            fprintf(stderr, "mm_check failed in free, error: %d\n", err);
-            exit(err);
-        }
+        DEBUG_PRINTF("%s\n", _mm_error(err));
+        if (err != 0) exit(1);
     }
 
     /* NULL the user pointer */
@@ -261,9 +243,7 @@ void _mm_remove_link(void *rem_block)
     /* if this was the last link, set FREE_HEAD to null */
     if ((rem_block == FREE_HEAD) && (FREE_LENGTH == 1)) {
         FREE_HEAD = NULL;
-        if (DEBUG_V) {
-            fprintf(stderr, "~ FREE_HEAD is now NULL\n");
-        }
+        if(DEBUG) fprintf(stderr, "~ FREE_HEAD is now NULL\n");
     } else if (*next_ptr(rem_block) == *prev_ptr(rem_block)) {
         /* two items in list, remove rem_block and set other to HEAD */
         FREE_HEAD = (void *)(*next_ptr(rem_block));
@@ -273,6 +253,10 @@ void _mm_remove_link(void *rem_block)
     } else {
         void *next_link = (void *)(*next_ptr(rem_block));
         void *prev_link = (void *)(*prev_ptr(rem_block));
+        if (next_link == NULL || prev_link == NULL) {
+            fprintf(stderr, "Removing block of size %u with null links??\n", size(rem_block));
+            exit(1);
+        }
         /* if we are removing the current head, replace */
         if (rem_block == FREE_HEAD) {
             FREE_HEAD = next_link;
@@ -280,6 +264,11 @@ void _mm_remove_link(void *rem_block)
         *next_ptr(prev_link) = (size_t *)next_link;
         *prev_ptr(next_link) = (size_t *)prev_link;
     }
+
+    /* remove links */
+    *next_ptr(rem_block) = 0x0;
+    *prev_ptr(rem_block) = 0x0;
+
 }
 
 /*
@@ -330,9 +319,7 @@ void *_mm_incr_heap(size_t size)
     /* for now, just increment by the size of the request */
     void *block = mem_sbrk(size);
     if (block == (void *)-1) {
-        if (DEBUG) {
-            fprintf(stderr, "mem_sbrk returned -1, no further heap available!\n");
-        }
+        if(DEBUG) fprintf(stderr, "mem_sbrk returned -1, no further heap available!\n");
         return NULL;
     } else {
         *(size_t *)block = size + 1;
@@ -366,100 +353,140 @@ void *mm_realloc(void *ptr, size_t size)
 /* Check the heap for errors */
 int mm_check()
 {
-    /* check that free list points to valid free blocks, forwards and backwards */
-    
-    int list_count = 0;
     void *curr_block, *next_block;
-    curr_block = FREE_HEAD;
-    if (curr_block != NULL) {
-        list_count++;
-        /* check that HEAD is valid */
-        if (is_alloc(curr_block) || is_alloc(footer(curr_block))){
-            fprintf(stderr, "FREE_HEAD points to invalid block: [%u|%d/%u|%d]\n",
-                size(curr_block), is_alloc(curr_block), size(footer(curr_block)), 
-                is_alloc(footer(curr_block)));
-            return INVALID_FREE_PTR;
-        }
-        if (*next_ptr(curr_block) == NULL || *prev_ptr(curr_block) == NULL) {
-        
-            fprintf(stderr, "FREE_HEAD points to NULL LINKS: [%u|%d/%u|%d]\n",
-                size(curr_block), is_alloc(curr_block), size(footer(curr_block)), 
-                is_alloc(footer(curr_block)));
-            return INVALID_FREE_PTR;
-        }
-
-        next_block = (void *)(*next_ptr(FREE_HEAD));
-
-        while (list_count < FREE_LENGTH) {
-            curr_block = next_block;
-            next_block = (void *)(*next_ptr(curr_block));
-            /* check that curr is valid */
-            if (is_alloc(curr_block) || is_alloc(footer(curr_block))){
-                fprintf(stderr, "Free list node points to invalid block: [%u|%d/%u|%d]\n",
-                    size(curr_block), is_alloc(curr_block), size(footer(curr_block)), 
-                    is_alloc(footer(curr_block)));
-                return INVALID_FREE_PTR;
-            } else if (size(curr_block) != size(footer(curr_block))) {
-                fprintf(stderr, "Free block has mismatch header and footer: [%u|%d;%u|%d]\n",
-                    size(curr_block), is_alloc(curr_block), size(footer(curr_block)), 
-                    is_alloc(footer(curr_block)));
-                return INVALID_FREE_PTR;
-            }else if (*next_ptr(curr_block) == NULL || *prev_ptr(curr_block) == NULL) {
-            
-                fprintf(stderr, "FREE_HEAD points to NULL LINKS: [%u|%d/%u|%d]\n",
-                    size(curr_block), is_alloc(curr_block), size(footer(curr_block)), 
-                    is_alloc(footer(curr_block)));
-                return INVALID_FREE_PTR;
-            }
-            list_count++;
+    /* check that each free block in the list has valid headers, footers, pointers */
+    int retval;
+    if ((retval = _mm_check_freelist()) != 0) {
+        return retval;
     }
 
-
-    }
-
-
+    /* check that the heap contains valid nodes, with no contiguous frees */
     size_t global_sum = 0;
-    size_t free_count = 0;
 
     curr_block = mem_heap_lo();
     next_block = next_header(curr_block);
     
     while (curr_block < mem_heap_hi()) {
+
+        /* check that headers, footers match up */
+        if ( (is_alloc(curr_block) != is_alloc(footer(curr_block))) || (size(curr_block) != size(footer(curr_block))) ){
+            fprintf(stderr, "Heap contains invalid block: [%u|%d/%u|%d]\n",
+                size(curr_block), is_alloc(curr_block), size(footer(curr_block)), 
+                is_alloc(footer(curr_block)));
+            return INVALID_BLOCK;
+        }
+
         /* keep a running sum to check against mem_heapsize at the end */
         global_sum += size(curr_block);
-        if (!is_alloc(curr_block))
-            free_count += 1;
 
-        /* check for contiguous free blocks */
-        if (!is_alloc(curr_block) && !is_alloc(next_block) && next_block < mem_heap_hi()) {
-            fprintf(stderr, "free blocks size %u and %u found contiguous\n", size(curr_block), size(next_block));
-            return CONTIGUOUS_FREE;
+        /* if the current block is marked free */
+        if (!is_alloc(curr_block)) {
+            /* check in free list */
+            if ((retval = _mm_find_freeblock(curr_block)) != 0){
+                return retval;
+            }
+
+            /* check no contiguous free blocks*/
+            if (next_block < mem_heap_hi() && !is_alloc(next_block)) {
+                return CONTIGUOUS_FREE;
+            }
         }
+
         curr_block = next_block;
         next_block = next_header(curr_block);
     }
 
     if (global_sum != mem_heapsize()) {
-        if (DEBUG_V) {
-            fprintf(stderr, "counted heap size %u, expected size %u\n", global_sum, mem_heapsize());
-        }
         return HEAPSIZE_MISMATCH;
     }
 
-    if (free_count != FREE_LENGTH) {
-        if (DEBUG_V) {
-            fprintf(stderr, "counted length: %u, expected: %u\n", free_count, FREE_LENGTH);
-        }
-        return LENGTH_MISMATCH;
-    }
+    return 0;
+}
 
-    if (list_count != free_count) {
-        if (DEBUG_V) {
-            fprintf(stderr, "free list contained: %u, heap contained: %u\n", list_count, free_count);
+/*
+ * Check that the free list contains FREE_LENGTH nodes that are all valid
+ */
+int _mm_check_freelist(void)
+{
+    int list_count = 0;
+    void *curr_block, *next_block;
+    next_block = FREE_HEAD;
+
+    while (list_count < FREE_LENGTH) {
+        list_count++;
+        
+        curr_block = next_block;
+        next_block = (void *)(*next_ptr(curr_block));
+        /* check that curr is valid */
+        if ( is_alloc(curr_block) || is_alloc(footer(curr_block)) || (size(curr_block) != size(footer(curr_block))) ){
+            fprintf(stderr, "Free list node points to invalid block: [%u|%d/%u|%d]\n",
+                size(curr_block), is_alloc(curr_block), size(footer(curr_block)), 
+                is_alloc(footer(curr_block)));
+            return INVALID_BLOCK;
+        }else if (*next_ptr(curr_block) == NULL || *prev_ptr(curr_block) == NULL) {
+        
+            fprintf(stderr, "Free block has NULL LINKS: [%u|%d/%u|%d]\n",
+                size(curr_block), is_alloc(curr_block), size(footer(curr_block)), 
+                is_alloc(footer(curr_block)));
+            return NULL_PTR;
         }
-        return UNLISTED_FREE;
-    
+        /* check that we do not loop back to the start before FREE_LENGTH is reached */
+        if (list_count != 1 && curr_block == FREE_HEAD) {
+            fprintf(stderr, "Free list looped back to FREE_HEAD after %d links; expected %d\n", list_count, FREE_LENGTH);
+            return SHORT_FREE_LIST;
+        }
     }
 
     return 0;
+}
+
+/*
+ * Verify that a free block in the heap is in the free list
+ */
+int _mm_find_freeblock(void *block)
+{
+    int list_count = 0;
+    void *curr_block = FREE_HEAD;
+    while (list_count < FREE_LENGTH) {
+        list_count++;
+        if (curr_block == block) {
+            return 0;
+        }
+        curr_block = (void *)(*next_ptr(curr_block));
+    }
+    return UNLISTED_FREE;
+}
+
+/* 
+ * Return a string describing the error encountered
+ */
+char *_mm_error(int errval)
+{
+    char *retstring;
+    switch(errval){
+        case 0:
+            retstring = "No errors.";
+            break;
+        case 1:
+            retstring = "Contiguous free blocks found heap.";
+            break;
+        case 2:
+            retstring = "Counted blocks in heap do not match heap size";
+            break;
+        case 3:
+            retstring = "An invalid block was found";
+            break;
+        case 4:
+            retstring = "A free block contained a null pointer";
+            break;
+        case 5:
+            retstring = "A free block is unlisted";
+            break;
+        case 6:
+            retstring = "The free list is missing a free block";
+            break;
+        default:
+            retstring = "";
+    }
+    return retstring;
 }
