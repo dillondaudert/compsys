@@ -112,9 +112,29 @@ void *mm_malloc(size_t size)
     /* look for first-fit block in the free list */
     for (i = 0; i < FREE_LENGTH; i++) {
         if (size(curr_block) >= newsize) {
-            /* remove the block from the list */
-            _mm_remove_link(curr_block);
-            FREE_LENGTH--;
+
+            /* split off excess if enough left over*/
+            size_t excess = size(curr_block) - newsize;
+            if (excess >= MIN_SIZE) {
+
+                /* split off the end, curr_block pointers unmodified! */
+                void *remain_block = curr_block;
+                *(size_t *)remain_block = excess;
+                *(size_t *)footer(remain_block) = excess;
+
+                curr_block = next_header(remain_block);
+                *(size_t *)curr_block = newsize;
+                *(size_t *)footer(curr_block) = newsize;
+
+
+
+
+            } else {
+                /* remove the block from the list */
+                _mm_remove_link(curr_block);
+                FREE_LENGTH--;
+            }
+
             DEBUG_PRINTF("MALLOC: block size %u | free length: %d\n", size(curr_block), FREE_LENGTH);
 
             /* mark removed block as allocated */
@@ -253,10 +273,6 @@ void _mm_remove_link(void *rem_block)
     } else {
         void *next_link = (void *)(*next_ptr(rem_block));
         void *prev_link = (void *)(*prev_ptr(rem_block));
-        if (next_link == NULL || prev_link == NULL) {
-            fprintf(stderr, "Removing block of size %u with null links??\n", size(rem_block));
-            exit(1);
-        }
         /* if we are removing the current head, replace */
         if (rem_block == FREE_HEAD) {
             FREE_HEAD = next_link;
