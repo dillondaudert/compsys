@@ -55,7 +55,7 @@ team_t team = {
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
 #define INIT_SIZE 1024
-#define INCR_SIZE 256
+#define INCR_SIZE 512
 
 /* all of these macros are called with ptrs to the payload of a block */
 #define header(ptr) ((void *)((char *)ptr - SIZE_T_SIZE))
@@ -88,7 +88,7 @@ int mm_init(void)
     FREE_LENGTH = 0;
     /* Initialize the first block of the free list */
     void *newmem;
-    newmem = mm_malloc(MIN_SIZE);
+    newmem = mm_malloc(INIT_SIZE);
 
     if(newmem == NULL)
         return -1;
@@ -158,8 +158,35 @@ void *mm_malloc(size_t size)
         curr_block = (void *)(*next_ptr(curr_block));
     }
     
-    /* in this case, no item in list was found, so incr heap */
-    new_payld = _mm_incr_heap(newsize);
+    void *new_mem, *excess_block;
+    /* no item in list was found, incr heap */
+    if (newsize+MIN_SIZE < INCR_SIZE) {
+
+        excess_block = _mm_incr_heap(INCR_SIZE);
+
+        size_t excess = INCR_SIZE - newsize;
+
+        void *excess_ptr = (void *)((char *)excess_block + SIZE_T_SIZE);
+        *(size_t *)excess_block = excess;
+        *(size_t *)footer(excess_block) = excess;
+
+        /* break off allocated chunk from end */
+        new_mem = next_header(excess_block);
+        new_payld = (void *)((char *)new_mem + SIZE_T_SIZE);
+        *(size_t *)new_mem = newsize | 0x1;
+        *(size_t *)footer(new_mem) = newsize | 0x1;
+
+        /* free the preceeding excess */
+        mm_free(excess_ptr);
+
+
+    } else {
+        new_mem = _mm_incr_heap(newsize);
+        /* mark as allocated */
+        *(size_t *)new_mem |= 0x1;
+        *(size_t *)footer(new_mem) |= 0x1;
+        new_payld = (void *)((char *)new_mem + SIZE_T_SIZE);
+    }
 
 
     if (DEBUG) {
@@ -343,10 +370,9 @@ void *_mm_incr_heap(size_t size)
         if(DEBUG) fprintf(stderr, "mem_sbrk returned -1, no further heap available!\n");
         return NULL;
     } else {
-        *(size_t *)block = size + 1;
-        void *payld = (void *)((char *)block + SIZE_T_SIZE);
-        *(size_t *)footer(block) = size + 1;
-        return payld;
+        *(size_t *)block = size;
+        *(size_t *)footer(block) = size;
+        return block;
     }
 
 }
@@ -355,6 +381,7 @@ void *_mm_incr_heap(size_t size)
  */
 void *mm_realloc(void *ptr, size_t size)
 {
+    fprintf(stderr, "Realloc called\n");
 
     if (ptr == NULL) {
         return mm_malloc(size);
