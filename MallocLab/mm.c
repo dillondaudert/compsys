@@ -1,13 +1,23 @@
 /*
- * mm-naive.c - The fastest, least memory-efficient malloc package.
- * 
- * In this naive approach, a block is allocated by simply incrementing
- * the brk pointer.  A block is pure payload. There are no headers or
- * footers.  Blocks are never coalesced or reused. Realloc is
- * implemented directly using mm_malloc and mm_free.
+ * mm.c - 
  *
- * NOTE TO STUDENTS: Replace this header comment with your own header
- * comment that gives a high level description of your solution.
+ * The memory allocator works as follows:
+ *
+ * Blocks of memory consist of a header, space for at least 2 pointers, and a footer. In
+ * 	total, each block is at least 32 bytes. In any case where excess memory is split
+ *	from a block, a check is done to ensure that the split is at least 32 bytes.
+ * Memory is requested from the heap as needed (min 256 bytes at a time), and placed
+ * 	in a single explicit free list.
+ * Calls to malloc return the first fit block found in the free list, but if that block
+ * 	is much bigger than the requested size, the excess memory is split off and 
+ * 	retained in the free list.
+ * Calls to free place a block back in the free list, making sure to coalesce with 
+ * 	any contiguous free blocks before or after the recently freed block.
+ * Calls to realloc will either expand or contract the block passed in.
+ * 	If the block is contracting, then the excess memory is split off and freed, 
+ * 	with the remaining being returned to the caller.
+ *	Else if the block is expanding, a new block that is large enough is malloc'd,
+ *	and the old block is free'd.
  */
 #include <stdio.h>
 #include <stdlib.h>
