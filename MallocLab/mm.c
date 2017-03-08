@@ -18,6 +18,23 @@
 #include "mm.h"
 #include "memlib.h"
 
+/* private static helper functions */
+static int mm_check (void);
+static void *_mm_incr_heap(size_t size);
+static void _mm_insert_link(void *);
+static void _mm_remove_link(void *);
+static char *_mm_error(int);
+static int _mm_check_freelist(void);
+static int _mm_find_freeblock(void *);
+
+/* error defines for mm_check clarity */
+#define CONTIGUOUS_FREE 1
+#define HEAPSIZE_MISMATCH 2
+#define INVALID_BLOCK 3
+#define NULL_PTR 4
+#define UNLISTED_FREE 5
+#define SHORT_FREE_LIST 6
+
 team_t team = {
     /* Team name */
     "I have no team",
@@ -34,12 +51,11 @@ team_t team = {
 /* mm_check debug flag */
 #define DEBUG 0
 
-/* debug print statement */
 #define DEBUG_PRINTF(fmt, ...) \
     do { if (DEBUG) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
                             __LINE__, __func__, __VA_ARGS__); } while (0)
 
-/* single word (4) or double word (8) alignment */
+/* double word (8) alignment */
 #define ALIGNMENT 8
 
 /* minimize size: header (8) + 2 pointers (16) + footer (8) */
@@ -48,20 +64,16 @@ team_t team = {
 /* rounds up to the nearest multiple of ALIGNMENT */
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~0x7)
 
-/* round up to the nearest multiple of pagesize */
-#define ALIGN_PAGE(size) (((size) + (mem_pagesize() - 1)) & ~(mem_pagesize() - 1))
-
-
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
-#define INIT_SIZE 1024
-#define INCR_SIZE 512
+#define INIT_SIZE 256
+#define INCR_SIZE 256
 
 /* all of these macros are called with ptrs to the payload of a block */
 #define header(ptr) ((void *)((char *)ptr - SIZE_T_SIZE))
-#define footer(block) ((void *)((char *)block + size(block) - SIZE_T_SIZE))
 
 /* all of these macros are called with ptrs to the block header*/
+#define footer(block) ((void *)((char *)block + size(block) - SIZE_T_SIZE))
 #define size(block) (*((size_t *)block) & ~0x7)
 #define is_alloc(block) (*((size_t *)block) & 0x1)
 
@@ -104,7 +116,9 @@ int mm_init(void)
 }
 
 /* 
- * mm_malloc
+ * mm_malloc - Finds the first block of appropriate size in the free list and returns it
+ * If the first block found is too large, the excess memory is split off and kept in the list
+ * If no block is found, the heap is expanded by at least INCR_SIZE bytes
  */
 void *mm_malloc(size_t size)
 {
@@ -200,7 +214,9 @@ void *mm_malloc(size_t size)
 
 
 /*
- * mm_free
+ * mm_free - Free a previously allocated block. 
+ * If the freed block is adjacent to any other free blocks, they are coalesced into a single block
+ * Freed block are placed into a single linked list via the functions _mm_insert_link, _mm_remove_link
  */
 void mm_free(void *ptr)
 {
@@ -223,6 +239,7 @@ void mm_free(void *ptr)
 
         /* remove all blocks from free list */
         _mm_remove_link(prev_block);
+        /* because we are removing two links and replacing with one, decrement count */
         FREE_LENGTH--;
         _mm_remove_link(next_block);
 
@@ -231,7 +248,6 @@ void mm_free(void *ptr)
         *(size_t *)prev_block = new_size;
         *(size_t *)footer(next_block) = new_size;
         _mm_insert_link(prev_block);
-        /* because we are removing two links and replacing with one, decrement count */
         DEBUG_PRINTF("INSERT block size (header/footer): %u/%u, new free length: %d\n", size(prev_block), size(footer(prev_block)), FREE_LENGTH);
 
 
@@ -364,7 +380,6 @@ void _mm_insert_link(void *add_block)
  */
 void *_mm_incr_heap(size_t size)
 {
-    /* for now, just increment by the size of the request */
     void *block = mem_sbrk(size);
     if (block == (void *)-1) {
         if(DEBUG) fprintf(stderr, "mem_sbrk returned -1, no further heap available!\n");
@@ -377,7 +392,10 @@ void *_mm_incr_heap(size_t size)
 
 }
 /*
- * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
+ * mm_realloc - Reallocates a block pointed at by ptr to a new block of size bytes.
+ * If the reallocation contracts the size of the block, the excess space is freed
+ * Else if the reallocation expands the size of the block, a new block is malloc'd
+ * and the data is copied over. The old block is freed.
  */
 void *mm_realloc(void *ptr, size_t size)
 {
@@ -566,3 +584,4 @@ char *_mm_error(int errval)
     }
     return retstring;
 }
+
