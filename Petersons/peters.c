@@ -1,9 +1,11 @@
-/*Simple implementation of Peterson's Algorithm for synchonization between two 
-* processes
-*/
+/* Date: 22/03/2016
+ * Class: CS5540
+ * Assignment: Peterson's Algorithm
+ * Author: Dillon Daudert
+ */
 
-/* define _BSD_SOURCE for usleep compatibility */
-#define _BSD_SOURCE
+/* define _DEFAULT_SOURCE for usleep compatibility */
+#define _DEFAULT_SOURCE
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -11,7 +13,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#define MAX_LOOP 60
+#define MAX_CHARS 1200
 
 /* global variables */
 bool flag[2] = {false, false};
@@ -24,24 +26,27 @@ void *t_func(void *tid)
 {
     long id = (long) tid;
     long other_id = id == 0 ? 1 : 0;
-    while(true){
+    while(count < MAX_CHARS){
+
         flag[id] = true;
         turn = other_id;
         while(flag[other_id] && turn == other_id){
             usleep(50000);
         }
         /* start critical section */
-        count++;
-        if (count > 30) {
-            count = 0;
+        if (count % 30 == 0) {
             fprintf(stdout, "%c", '\n');
         } else {
             fprintf(stdout, "%c", printchar[id]);
             fflush(stdout);
         }
+        count++;
         /* end critical section */ 
         flag[id] = false;
+
     }
+
+    return NULL;
 }
 
 int main(int argc, char **argv)
