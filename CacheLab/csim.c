@@ -78,7 +78,7 @@ void simCache(Cache *my_cache, char *tracefile)
         case 'L':
             _cacheRead(my_cache, addr, size);
             if(verbose){
-                printf("%c %lx,%d ", instr, addr, size);
+                printf("%c %8lx,%d ", instr, addr, size);
                 if(my_cache->h_flag)
                     printf("hit ");
                 if(my_cache->m_flag)
@@ -91,7 +91,7 @@ void simCache(Cache *my_cache, char *tracefile)
         case 'S':
             _cacheWrite(my_cache, addr, size);
             if(verbose){
-                printf("%c %lx,%d ", instr, addr, size);
+                printf("%c %8lx,%d ", instr, addr, size);
                 if(my_cache->h_flag)
                     printf("hit ");
                 if(my_cache->m_flag)
@@ -104,7 +104,7 @@ void simCache(Cache *my_cache, char *tracefile)
         case 'M':
             _cacheRead(my_cache, addr, size);
             if(verbose){
-                printf("%c %lx,%d ", instr, addr, size);
+                printf("%c %8lx,%d ", instr, addr, size);
                 if(my_cache->h_flag)
                     printf("hit ");
                 if(my_cache->m_flag)
@@ -154,6 +154,13 @@ void _cacheWrite(Cache *my_cache, unsigned long int addr, int size)
             //Hit, write-through
             my_cache->h_flag = 1;
             my_cache->hits++;
+            //If more than one lin, and this is not the first one
+            if(prev != curr){
+                //Cache location accessed, move to front of LL
+                prev->nxt = curr->nxt;
+                curr->nxt = my_cache->sets[set_index].head;
+                my_cache->sets[set_index].head = curr;
+            }
             break;
         }else if(curr->valid == 0){
             //Cold miss
@@ -212,6 +219,13 @@ void _cacheRead(Cache *my_cache, unsigned long int addr, int size)
             //Hit
             my_cache->h_flag = 1;
             my_cache->hits++;
+            //If more than one lin, and this is not the first one
+            if(prev != curr){
+                //Cache location accessed, move to front of LL
+                prev->nxt = curr->nxt;
+                curr->nxt = my_cache->sets[set_index].head;
+                my_cache->sets[set_index].head = curr;
+            }
             break;
         }else if(curr->valid == 0){
             //Cold miss
@@ -244,6 +258,7 @@ void _cacheRead(Cache *my_cache, unsigned long int addr, int size)
         //Evict last data, load new, move to head
         prev->nxt = NULL;
         curr->valid = 1;
+//        printf("Evicting cache location with tag: %8lx\n", curr->tag);
         curr->tag = tag;
         curr->nxt = my_cache->sets[set_index].head;
         my_cache->sets[set_index].head = curr;
