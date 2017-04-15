@@ -18,25 +18,36 @@ def read_example(path):
         header = next(reader)
         if header[0] == "U":
             stype = "uni"
-            n_procs = header[1]
-            quantum = header[2]
+            n_procs = int(header[1])
+            quantum = int(header[2])
         elif header[0] == "RA":
             stype = "ra"
-            n_procs = header[1]
+            n_procs = int(header[1])
         else:
             stype = "rp"
-            n_procs = header[1]
-            max_time = header[2]
-        for proc in reader:
+            n_procs = int(header[1])
+            max_time = int(header[2])
+        for row, proc in enumerate(reader):
             if stype == "uni":
                 processes.append(Process(proc[0], int(proc[1]), int(proc[2])))
             elif stype == "ra":
                 processes.append(Process(proc[0], int(proc[1]), int(proc[2]),
                                          int(proc[3])))
             else:
-                processes.append(PeriodicProcess(proc[0], int(proc[1]), int(proc[2]),
-                                                 int(proc[3])))
+                #Periodic, create periodic processes
+                p_period = int(proc[3])
+                p_num = max_time // p_period
+                for i in range(0,p_num):
+                    arrival = int(proc[1]) + (i*p_period)
+                    processes.append(PeriodicProcess(name=proc[0],
+                                                     arrival=arrival,
+                                                     exec_time=int(proc[2]),
+                                                     deadline=arrival+p_period,
+                                                     period=p_period,
+                                                     count=i+1,
+                                                     priority=row))
+        #Sort the process list by arrival time
+        processes.sort(key=lambda x: x.arrival)
 
-    sched = Scheduler(stype=stype, procs=processes, quantum=quantum, max_time=max_time)
 
-    return sched
+    return Scheduler(stype=stype, procs=processes, quantum=quantum, max_time=max_time)
